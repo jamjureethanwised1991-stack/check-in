@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Attendance Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    /* CSS ส่วนนี้คงเดิมไม่มีการเปลี่ยนแปลง */
+    :root {
+      --primary: #8C9EFF; --primary-dark: #536DFE;
+      --success: #a8e6cf; --success-dark: #66bb6a;
+      --danger: #ffb7b2; --danger-dark: #ef5350;
+      --warning: #ffdfba; --warning-dark: #ffa726;
+      --info: #bae1ff; --info-dark: #42a5f5;
+      --bg: #f4f7f6; --white: #ffffff;
+      --text: #333333; --gray: #e0e0e0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+    .sidebar { width: 250px; background: var(--white); box-shadow: 2px 0 5px rgba(0,0,0,0.05); transition: 0.3s; z-index: 100; }
+    .brand { padding: 20px; background: var(--primary); color: var(--white); display: flex; align-items: center; gap: 10px; }
+    .nav { list-style: none; padding: 20px 0; }
+    .nav li { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; gap: 15px; color: #555; transition: 0.2s; border-left: 4px solid transparent; font-weight: 500;}
+    .nav li:hover { background: #f0f4ff; color: var(--primary-dark); }
+    .nav li.active { border-left-color: var(--primary); background: #f0f4ff; color: var(--primary-dark); }
+    .mobile-topbar { display: none; background: var(--primary); color: white; padding: 15px; align-items: center; gap: 15px; }
+    .main-content { flex: 1; padding: 20px; overflow-y: auto; height: 100vh;}
+    .header-info { background: var(--white); padding: 15px 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;}
+    .page { display: none; animation: fadeIn 0.3s; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .card { background: var(--white); padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; }
+    .card-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; }
+    .card-total .card-icon { background: #ab47bc; }
+    .card-present { background: #e8f5e9; border: 1px solid var(--success-dark); } .card-present .card-icon { background: var(--success-dark); }
+    .card-absent { background: #ffebee; border: 1px solid var(--danger-dark); } .card-absent .card-icon { background: var(--danger-dark); }
+    .card-leave { background: #fff8e1; border: 1px solid var(--warning-dark); } .card-leave .card-icon { background: var(--warning-dark); }
+    .card-sick { background: #e3f2fd; border: 1px solid var(--info-dark); } .card-sick .card-icon { background: var(--info-dark); }
+    .card-unchecked { background: #f5f5f5; border: 1px solid #9e9e9e; } .card-unchecked .card-icon { background: #9e9e9e; }
+    .card-data h3 { font-size: 24px; }
+    .dashboard-charts { display: flex; gap: 20px; flex-wrap: wrap; }
+    .chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex: 1; min-width: 300px; }
+    .btn { border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 15px; display: inline-flex; align-items: center; gap: 5px; color: white; transition: 0.2s;}
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); } .btn-primary:hover { background: var(--primary-dark); }
+    .btn-success { background: var(--success-dark); } .btn-success:hover { background: #4caf50; }
+    .btn-danger { background: var(--danger-dark); } .btn-danger:hover { background: #f44336; }
+    .btn-warning { background: var(--warning-dark); color: #333; } .btn-warning:hover { background: #ff9800; color: white;}
+    .btn-info { background: var(--info-dark); }
+    .form-control { padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; outline: none; }
+    .form-control:focus { border-color: var(--primary); }
+    .controls { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center;}
+    .table-responsive { overflow-x: auto; background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th, td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: center; }
+    th { background: #f8f9fa; font-weight: 600; }
+    tbody tr:hover { background: #fcfcfc; }
+    .status-group { display: flex; gap: 5px; justify-content: center; }
+    .btn-status { padding: 8px 12px; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer; color: #555; font-weight: 500; transition: 0.2s; }
+    .btn-status.active-มา { background: var(--success); border-color: var(--success-dark); color: #000; }
+    .btn-status.active-ขาด { background: var(--danger); border-color: var(--danger-dark); color: #000; }
+    .btn-status.active-ลากิจ { background: var(--warning); border-color: var(--warning-dark); color: #000; }
+    .btn-status.active-ลาป่วย { background: var(--info); border-color: var(--info-dark); color: #000; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.open { display: flex; }
+    .modal-content { background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px; }
+    .form-group { margin-bottom: 15px; display: flex; flex-direction: column; text-align: left; }
+    .loader-overlay { display: flex; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; }
+    .spinner { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 5px; padding: 16px; position: fixed; z-index: 3000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 16px; box-shadow: 0px 4px 6px rgba(0,0,0,0.3);}
+    .toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+    @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+    @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar { position: fixed; left: -250px; height: 100%; }
+      .sidebar.open { left: 0; }
+      .mobile-topbar { display: flex; }
+      .main-content { padding: 10px; }
+      .header-info { flex-direction: column; gap: 10px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="material-icons" style="font-size: 32px;">fact_check</span>
+      <h2>ระบบเช็คชื่อ</h2>
+    </div>
+    <ul class="nav">
+      <li class="active" onclick="navigate('dashboard', this)"><span class="material-icons">dashboard</span> หน้าหลัก</li>
+      <li onclick="navigate('attendance', this)"><span class="material-icons">how_to_reg</span> เช็คชื่อนักเรียน</li>
+      <li onclick="navigate('reports', this)"><span class="material-icons">bar_chart</span> สถิติและรายงาน</li>
+      <li onclick="navigate('students', this)"><span class="material-icons">group</span> จัดการนักเรียน</li>
+    </ul>
+  </div>
+
+  <!-- Topbar for Mobile -->
+  <div class="mobile-topbar">
+    <span class="material-icons" onclick="document.getElementById('sidebar').classList.toggle('open')">menu</span>
+    <h3>ระบบเช็คชื่อออนไลน์</h3>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="header-info" id="headerInfo">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Page 1: Dashboard -->
+    <div id="page-dashboard" class="page active">
+      <div class="grid-cards">
+        <div class="card card-total">
+          <div class="card-icon"><span class="material-icons">people</span></div>
+          <div class="card-data"><h3 id="dash-total">0</h3><p>นักเรียนทั้งหมด</p><small>ชาย: <span id="dash-boy">0</span> | หญิง: <span id="dash-girl">0</span></small></div>
+        </div>
+        <div class="card card-present">
+          <div class="card-icon"><span class="material-icons">check_circle</span></div>
+          <div class="card-data"><h3 id="dash-มา">0</h3><p>มาเรียนวันนี้</p></div>
+        </div>
+        <div class="card card-absent">
+          <div class="card-icon"><span class="material-icons">cancel</span></div>
+          <div class="card-data"><h3 id="dash-ขาด">0</h3><p>ขาดเรียน</p></div>
+        </div>
+        <div class="card card-leave">
+          <div class="card-icon"><span class="material-icons">beach_access</span></div>
+          <div class="card-data"><h3 id="dash-ลากิจ">0</h3><p>ลากิจ</p></div>
+        </div>
+        <div class="card card-sick">
+          <div class="card-icon"><span class="material-icons">local_hospital</span></div>
+          <div class="card-data"><h3 id="dash-ลาป่วย">0</h3><p>ลาป่วย</p></div>
+        </div>
+        <div class="card card-unchecked">
+          <div class="card-icon"><span class="material-icons">help_outline</span></div>
+          <div class="card-data"><h3 id="dash-ยังไม่เช็คชื่อ">0</h3><p>ยังไม่ได้เช็ค</p></div>
+        </div>
+      </div>
+      
+      <div class="dashboard-charts">
+        <div class="chart-container">
+          <h4>สัดส่วนการมาเรียนวันนี้ (<span id="dash-percent">0</span>%)</h4>
+          <canvas id="dashPieChart"></canvas>
+        </div>
+        <div class="chart-container" style="flex: 2;">
+          <h4 style="text-align: center; margin-top: 50px;">กดปุ่มด้านล่างเพื่อเริ่มเช็คชื่อนักเรียน</h4>
+          <button class="btn btn-primary" style="display: block; margin: 20px auto; font-size: 1.2rem; padding: 15px 30px;" onclick="document.querySelectorAll('.nav li')[1].click()">
+            <span class="material-icons">touch_app</span> เช็คชื่อวันนี้
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page 2: Attendance -->
+    <div id="page-attendance" class="page">
+      <div class="controls">
+        <div>
+          <label>เลือกวันที่:</label>
+          <input type="date" id="att-date" class="form-control" onchange="loadAttendanceList()">
+        </div>
+        <div>
+          <button class="btn btn-success" onclick="selectAllPresent()"><span class="material-icons">done_all</span> เลือกมาทั้งหมด</button>
+          <button class="btn btn-warning" onclick="clearSelection()"><span class="material-icons">clear_all</span> ล้างการเลือก</button>
+        </div>
+      </div>
+      <div class="controls" style="margin-top: 10px;">
+        <input type="text" id="att-search" class="form-control" placeholder="ค้นหา ชื่อ, เลขที่..." onkeyup="filterAttendanceTable()">
+        <button class="btn btn-primary" onclick="saveAttendance()" id="btn-save-att"><span class="material-icons">save</span> บันทึกการเช็คชื่อ</button>
+      </div>
+      <div class="table-responsive">
+        <table id="att-table">
+          <thead><tr><th>เลขที่</th><th>รหัส</th><th>ชื่อ-นามสกุล</th><th>สถานะ</th></tr></thead>
+          <tbody id="att-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Page 3: Reports -->
+    <div id="page-reports" class="page">
+      <div class="controls">
+        <div>
+          <label>เริ่มวันที่:</label> <input type="date" id="rep-start" class="form-control">
+          <label>ถึง:</label> <input type="date" id="rep-end" class="form-control">
+          <button class="btn btn-primary" onclick="loadReport()"><span class="material-icons">search</span> ค้นหา</button>
+        </div>
+        <div>
+          <button class="btn btn-danger" onclick="generatePDFReport()" id="btn-pdf"><span class="material-icons">picture_as_pdf</span> สร้างรายงาน PDF</button>
+        </div>
+      </div>
+      <div class="chart-container" style="margin-top: 20px;">
+        <canvas id="repBarChart"></canvas>
+      </div>
+      <div class="table-responsive" style="margin-top: 20px;">
+        <table id="rep-table">
+          <thead><tr><th>เลขที่</th><th>ชื่อ-นามสกุล</th><th>มา</th><th>ขาด</th><th>ลากิจ</th><th>ลาป่วย</th><th>ร้อยละ (มาเรียน)</th></tr></thead>
+          <tbody id="rep-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Page 4: Student Management -->
+    <div id="page-students" class="page">
+      <div class="controls">
+        <button class="btn btn-primary" onclick="openStudentModal()"><span class="material-icons">person_add</span> เพิ่มนักเรียน</button>
+        <input type="text" id="stu-search" class="form-control" placeholder="ค้นหานักเรียน..." onkeyup="filterStudentTable()">
+      </div>
+      <div class="table-responsive">
+        <table id="stu-table">
+          <thead><tr><th>เลขที่</th><th>รหัส</th><th>ชื่อ-นามสกุล</th><th>เพศ</th><th>จัดการ</th></tr></thead>
+          <tbody id="stu-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loader" class="loader-overlay">
+    <div class="spinner"></div>
+    <div style="color: white; margin-top: 15px; font-size: 18px;" id="loader-text">กำลังโหลดข้อมูล...</div>
+  </div>
+
+  <!-- Modal Student -->
+  <div id="student-modal" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title">เพิ่มนักเรียน</h3>
+      <input type="hidden" id="form-key">
+      <div class="form-group"><label>เลขที่</label><input type="number" id="form-no" class="form-control" required></div>
+      <div class="form-group"><label>เลขประจำตัว (ห้ามซ้ำ)</label><input type="text" id="form-id" class="form-control" required></div>
+      <div class="form-group"><label>ชื่อ</label><input type="text" id="form-fname" class="form-control" required></div>
+      <div class="form-group"><label>นามสกุล</label><input type="text" id="form-lname" class="form-control" required></div>
+      <div class="form-group">
+        <label>เพศ</label>
+        <select id="form-gender" class="form-control"><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select>
+      </div>
+      <div style="text-align: right; margin-top: 20px;">
+        <button class="btn" onclick="closeStudentModal()">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveStudentData()">บันทึกข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // ==========================================
+    // ⚠️ นำ URL Web App ที่ได้จาก Google Apps Script มาใส่ที่นี่
+    // ==========================================
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxHsZEsH_cDi1yUYGBFKD8IFlQHLzPNJwvZMYWRq_vIrvQq1G4hioFAE3R4_2OMsSSDSA/exec'; // แทนที่ URL ตรงนี้
+
+    // ==========================================
+    // Core API Fetch Function
+    // ==========================================
+    async function fetchAPI(action, data = {}) {
+      try {
+        let response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: action, ...data }),
+          redirect: 'follow'
+        });
+        let result = await response.json();
+        if (result && result.success === false && result.message) {
+          throw new Error(result.message);
+        }
+        return result;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    let state = { students: [], attendance: {}, settings: {}, charts: {} };
+
+    // Utilities
+    function showLoader(text = 'กำลังโหลดข้อมูล...') {
+      document.getElementById('loader-text').innerText = text;
+      document.getElementById('loader').style.display = 'flex';
+    }
+    function hideLoader() { document.getElementById('loader').style.display = 'none'; }
+    function showToast(msg) {
+      let t = document.getElementById('toast');
+      t.innerText = msg;
+      t.className = "toast show";
+      setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+    }
+    function getTodayString() {
+      let d = new Date(); // Timezone Asia/Bangkok
+      return d.toISOString().split('T')[0];
+    }
+
+    // Navigation
+    function navigate(pageId, el) {
+      document.querySelectorAll('.nav li').forEach(li => li.classList.remove('active'));
+      el.classList.add('active');
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + pageId).classList.add('active');
+      document.getElementById('sidebar').classList.remove('open');
+      
+      if (pageId === 'dashboard') loadDashboard();
+      if (pageId === 'attendance') {
+        if(!document.getElementById('att-date').value) document.getElementById('att-date').value = getTodayString();
+        loadAttendanceList();
+      }
+      if (pageId === 'students') loadStudents();
+      if (pageId === 'reports') {
+        document.getElementById('rep-start').value = getTodayString();
+        document.getElementById('rep-end').value = getTodayString();
+        loadReport();
+      }
+    }
+
+    window.onload = () => { loadDashboard(); };
+
+    function updateHeaderInfo() {
+      let d = new Date();
+      document.getElementById('headerInfo').innerHTML = `
+        <div>
+          <h2 style="color: var(--primary-dark);">${state.settings.SchoolName || 'โรงเรียน'}</h2>
+          <p>ชั้น: ${state.settings.ClassName || '-'} | ปีการศึกษา: ${state.settings.AcademicYear || '-'}</p>
+        </div>
+        <div style="text-align: right;">
+          <h4>${d.getDate()} ${["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"][d.getMonth()]} ${d.getFullYear()+543}</h4>
+          <p>ครูประจำชั้น: ${state.settings.TeacherName || '-'}</p>
+        </div>
+      `;
+    }
+
+    // Dashboard Page
+    function loadDashboard() {
+      showLoader();
+      let today = getTodayString();
+      fetchAPI('getDashboardData', { date: today })
+        .then(res => {
+          state.settings = res.settings;
+          state.students = res.students;
+          updateHeaderInfo();
+          
+          document.getElementById('dash-total').innerText = res.students.length;
+          document.getElementById('dash-boy').innerText = res.gender.boy;
+          document.getElementById('dash-girl').innerText = res.gender.girl;
+          
+          document.getElementById('dash-มา').innerText = res.stats['มา'] || 0;
+          document.getElementById('dash-ขาด').innerText = res.stats['ขาด'] || 0;
+          document.getElementById('dash-ลากิจ').innerText = res.stats['ลากิจ'] || 0;
+          document.getElementById('dash-ลาป่วย').innerText = res.stats['ลาป่วย'] || 0;
+          document.getElementById('dash-ยังไม่เช็คชื่อ').innerText = res.stats['ยังไม่เช็คชื่อ'] || 0;
+
+          let totalActive = res.students.length;
+          let present = res.stats['มา'] || 0;
+          let percent = totalActive > 0 ? ((present / totalActive) * 100).toFixed(1) : 0;
+          document.getElementById('dash-percent').innerText = percent;
+
+          renderPieChart(res.stats);
+          hideLoader();
+        })
+        .catch(err => { hideLoader(); alert('Error: ' + err.message); });
+    }
+
+    function renderPieChart(stats) {
+      if(state.charts.pie) state.charts.pie.destroy();
+      let ctx = document.getElementById('dashPieChart').getContext('2d');
+      state.charts.pie = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['มา', 'ขาด', 'ลากิจ', 'ลาป่วย', 'ยังไม่เช็คชื่อ'],
+          datasets: [{
+            data: [stats['มา']||0, stats['ขาด']||0, stats['ลากิจ']||0, stats['ลาป่วย']||0, stats['ยังไม่เช็คชื่อ']||0],
+            backgroundColor: ['#66bb6a', '#ef5350', '#ffa726', '#42a5f5', '#9e9e9e']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    // Attendance Page
+    function loadAttendanceList() {
+      showLoader();
+      let date = document.getElementById('att-date').value;
+      fetchAPI('getDashboardData', { date: date })
+        .then(res => {
+          state.students = res.students;
+          state.attendance = res.attendance || {};
+          renderAttendanceTable();
+          hideLoader();
+        })
+        .catch(err => { hideLoader(); alert('Error: ' + err.message); });
+    }
+
+    function renderAttendanceTable(filterText = '') {
+      let tbody = document.getElementById('att-tbody');
+      tbody.innerHTML = '';
+      
+      let filtered = state.students.filter(s => 
+        s.firstName.includes(filterText) || s.lastName.includes(filterText) || 
+        String(s.studentId).includes(filterText) || String(s.number).includes(filterText)
+      );
+
+      filtered.forEach(s => {
+        let status = state.attendance[s.studentKey] || '';
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.number}</td>
+          <td>${s.studentId}</td>
+          <td style="text-align: left;">${s.firstName} ${s.lastName}</td>
+          <td>
+            <div class="status-group">
+              <button class="btn-status ${status==='มา' ? 'active-มา':''}" onclick="setStatus('${s.studentKey}', 'มา', this)">มา</button>
+              <button class="btn-status ${status==='ขาด' ? 'active-ขาด':''}" onclick="setStatus('${s.studentKey}', 'ขาด', this)">ขาด</button>
+              <button class="btn-status ${status==='ลากิจ' ? 'active-ลากิจ':''}" onclick="setStatus('${s.studentKey}', 'ลากิจ', this)">ลากิจ</button>
+              <button class="btn-status ${status==='ลาป่วย' ? 'active-ลาป่วย':''}" onclick="setStatus('${s.studentKey}', 'ลาป่วย', this)">ลาป่วย</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterAttendanceTable() {
+      let txt = document.getElementById('att-search').value;
+      renderAttendanceTable(txt);
+    }
+
+    function setStatus(studentKey, status, btnElement) {
+      state.attendance[studentKey] = status;
+      let group = btnElement.parentElement;
+      group.querySelectorAll('.btn-status').forEach(b => b.className = 'btn-status');
+      btnElement.classList.add('active-' + status);
+    }
+
+    function selectAllPresent() {
+      if(confirm('ต้องการตั้งสถานะนักเรียนทั้งหมดเป็น "มา" ใช่หรือไม่?')) {
+        state.students.forEach(s => { state.attendance[s.studentKey] = 'มา'; });
+        renderAttendanceTable(document.getElementById('att-search').value);
+      }
+    }
+
+    function clearSelection() {
+      if(confirm('ต้องการล้างสถานะที่เลือกไว้ทั้งหมดใช่หรือไม่? (ยังไม่ได้บันทึกลงระบบ)')) {
+        state.attendance = {};
+        renderAttendanceTable(document.getElementById('att-search').value);
+      }
+    }
+
+    function saveAttendance() {
+      let date = document.getElementById('att-date').value;
+      if(!date) return alert('กรุณาเลือกวันที่');
+      
+      let btn = document.getElementById('btn-save-att');
+      btn.disabled = true;
+      showLoader('กำลังบันทึกข้อมูล...');
+      
+      fetchAPI('saveAttendanceData', { dateStr: date, attendanceData: state.attendance })
+        .then(res => {
+          showToast(res.message);
+          btn.disabled = false;
+          hideLoader();
+        })
+        .catch(err => {
+          alert(err.message);
+          btn.disabled = false;
+          hideLoader();
+        });
+    }
+
+    // Students Management Page
+    function loadStudents() {
+      showLoader();
+      fetchAPI('getStudents', { includeInactive: false })
+        .then(res => {
+          state.students = res;
+          renderStudentTable();
+          hideLoader();
+        })
+        .catch(err => { hideLoader(); alert('Error: ' + err.message); });
+    }
+
+    function renderStudentTable(filterText = '') {
+      let tbody = document.getElementById('stu-tbody');
+      tbody.innerHTML = '';
+      let filtered = state.students.filter(s => 
+        s.firstName.includes(filterText) || s.lastName.includes(filterText) || 
+        String(s.studentId).includes(filterText) || String(s.number).includes(filterText)
+      );
+      filtered.forEach(s => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.number}</td>
+          <td>${s.studentId}</td>
+          <td style="text-align: left;">${s.firstName} ${s.lastName}</td>
+          <td>${s.gender}</td>
+          <td>
+            <button class="btn btn-warning" style="padding: 5px;" onclick='editStudent(${JSON.stringify(s)})'><span class="material-icons" style="font-size:16px;">edit</span></button>
+            <button class="btn btn-danger" style="padding: 5px;" onclick="deleteStudentData('${s.studentKey}')"><span class="material-icons" style="font-size:16px;">delete</span></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterStudentTable() { renderStudentTable(document.getElementById('stu-search').value); }
+
+    function openStudentModal() {
+      document.getElementById('modal-title').innerText = "เพิ่มนักเรียนใหม่";
+      document.getElementById('form-key').value = '';
+      document.getElementById('form-no').value = '';
+      document.getElementById('form-id').value = '';
+      document.getElementById('form-fname').value = '';
+      document.getElementById('form-lname').value = '';
+      document.getElementById('form-gender').value = 'ชาย';
+      document.getElementById('student-modal').classList.add('open');
+    }
+
+    function closeStudentModal() { document.getElementById('student-modal').classList.remove('open'); }
+
+    function editStudent(s) {
+      document.getElementById('modal-title').innerText = "แก้ไขข้อมูลนักเรียน";
+      document.getElementById('form-key').value = s.studentKey;
+      document.getElementById('form-no').value = s.number;
+      document.getElementById('form-id').value = s.studentId;
+      document.getElementById('form-fname').value = s.firstName;
+      document.getElementById('form-lname').value = s.lastName;
+      document.getElementById('form-gender').value = s.gender;
+      document.getElementById('student-modal').classList.add('open');
+    }
+
+    function saveStudentData() {
+      let data = {
+        studentKey: document.getElementById('form-key').value,
+        number: document.getElementById('form-no').value,
+        studentId: document.getElementById('form-id').value,
+        firstName: document.getElementById('form-fname').value,
+        lastName: document.getElementById('form-lname').value,
+        gender: document.getElementById('form-gender').value
+      };
+      if(!data.number || !data.studentId || !data.firstName || !data.lastName) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      
+      showLoader();
+      fetchAPI('saveStudent', { studentData: data })
+        .then(res => {
+          closeStudentModal();
+          showToast(res.message);
+          loadStudents();
+        })
+        .catch(err => { hideLoader(); alert('Error: ' + err.message); });
+    }
+
+    function deleteStudentData(key) {
+      if(confirm('ต้องการลบรายชื่อนี้ใช่หรือไม่? (ประวัติการเช็คชื่อเดิมจะยังอยู่)')) {
+        showLoader();
+        fetchAPI('deleteStudent', { studentKey: key })
+          .then(res => {
+            showToast(res.message);
+            loadStudents();
+          })
+          .catch(err => { hideLoader(); alert('Error: ' + err.message); });
+      }
+    }
+
+    // Reports Page
+    function loadReport() {
+      let start = document.getElementById('rep-start').value;
+      let end = document.getElementById('rep-end').value;
+      if(!start || !end) return alert('กรุณาเลือกช่วงวันที่');
+      if(start > end) return alert('วันที่เริ่มต้นต้องน้อยกว่าหรือเท่ากับวันที่สิ้นสุด');
+      
+      showLoader();
+      fetchAPI('getReportData', { startDate: start, endDate: end })
+        .then(res => {
+          renderReportTable(res.report);
+          renderBarChart(res.overall);
+          hideLoader();
+        })
+        .catch(err => { hideLoader(); alert(err.message); });
+    }
+
+    function renderReportTable(reportData) {
+      let tbody = document.getElementById('rep-tbody');
+      tbody.innerHTML = '';
+      reportData.sort((a,b) => a.number - b.number).forEach(s => {
+        let percent = s.totalDays > 0 ? ((s['มา'] / s.totalDays) * 100).toFixed(2) : '0.00';
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.number}</td>
+          <td style="text-align: left;">${s.firstName} ${s.lastName}</td>
+          <td style="color:var(--success-dark)">${s['มา']}</td>
+          <td style="color:var(--danger-dark)">${s['ขาด']}</td>
+          <td style="color:var(--warning-dark)">${s['ลากิจ']}</td>
+          <td style="color:var(--info-dark)">${s['ลาป่วย']}</td>
+          <td><strong>${percent}%</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderBarChart(overall) {
+      if(state.charts.bar) state.charts.bar.destroy();
+      let ctx = document.getElementById('repBarChart').getContext('2d');
+      state.charts.bar = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['ชาย', 'หญิง'],
+          datasets: [
+            { label: 'มา', data: [overall['ชาย']['มา'], overall['หญิง']['มา']], backgroundColor: '#66bb6a' },
+            { label: 'ขาด', data: [overall['ชาย']['ขาด'], overall['หญิง']['ขาด']], backgroundColor: '#ef5350' },
+            { label: 'ลากิจ', data: [overall['ชาย']['ลากิจ'], overall['หญิง']['ลากิจ']], backgroundColor: '#ffa726' },
+            { label: 'ลาป่วย', data: [overall['ชาย']['ลาป่วย'], overall['หญิง']['ลาป่วย']], backgroundColor: '#42a5f5' }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    function generatePDFReport() {
+      let start = document.getElementById('rep-start').value;
+      let end = document.getElementById('rep-end').value;
+      let btn = document.getElementById('btn-pdf');
+      
+      btn.disabled = true;
+      showLoader('กำลังสร้างเอกสาร PDF...');
+      
+      fetchAPI('generatePDF', { startDate: start, endDate: end })
+        .then(res => {
+          hideLoader();
+          btn.disabled = false;
+          showToast('สร้าง PDF สำเร็จ');
+          window.open(res.url, '_blank');
+        })
+        .catch(err => {
+          hideLoader();
+          btn.disabled = false;
+          alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + err.message);
+        });
+    }
+  </script>
+</body>
+</html>
